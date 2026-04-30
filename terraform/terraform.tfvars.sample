@@ -1,0 +1,43 @@
+############################################################
+# terraform.tfvars.sample
+#
+# NÃO edite este arquivo diretamente.
+# O bootstrap.sh gera terraform/terraform.tfvars automaticamente
+# a partir do envs/.env do projeto.
+#
+# Este arquivo documenta todas as variáveis esperadas.
+############################################################
+
+# OpenStack
+os_auth_url             = "http://10.200.255.100:5000/v3"
+os_project_name         = "tenant1"
+os_username             = "user_tenant1"
+os_password             = ""
+os_region_name          = "RegionOne"
+os_private_network_name = "tenant1_private_net"
+os_private_subnet_name  = "tenant1_private_subnet"
+os_provider_network     = "provider-network"
+os_image_name           = "ubuntu-24.04"
+
+# Flavors
+flavor_db               = "m1.large"
+flavor_geonode          = "m1.large"
+flavor_geoserver_write  = "m1.large"
+flavor_geoserver_read   = "m1.medium"
+flavor_haproxy          = "m1.small"
+
+# IPs fixos
+ip_db                   = "192.168.1.100"
+ip_geonode              = "192.168.1.101"
+ip_geoserver_write      = "192.168.1.102"
+ip_geoserver_read_1     = "192.168.1.103"
+ip_geoserver_read_2     = "192.168.1.104"
+ip_haproxy_1            = "192.168.1.105"
+ip_haproxy_2            = "192.168.1.106"
+ip_haproxy_vip          = "192.168.1.107"
+
+# Floating IP
+create_floating_ip_for_vip = true
+
+# SSH
+ssh_public_key_path     = "~/.ssh/id_ed25519.pub"

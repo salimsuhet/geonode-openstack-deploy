@@ -1,0 +1,16 @@
+# Secrets — nunca commitar
+envs/.env
+terraform/terraform.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform/
+terraform/out*.plan
+terraform/.terraform.lock.hcl
+
+# Repositório clonado (gerado pelo bootstrap.sh)
+geonode-cluster/
+
+# Temporários
+*.retry
+__pycache__/
+.DS_Store
