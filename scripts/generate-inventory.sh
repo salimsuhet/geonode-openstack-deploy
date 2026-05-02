@@ -114,22 +114,16 @@ all:
 EOF
 
 # ── Gera group_vars/all.yml para produção ─────────────────
-# Aponta para o .env gerado pelo generate-env.sh.
-cat > "${GROUP_VARS_FILE}" <<EOF
----
-# Gerado automaticamente — não edite manualmente.
-# Carrega variáveis do .env via lookup('env', ...).
-# O arquivo .env foi gerado por scripts/generate-env.sh.
-
-# O geonode-cluster lê as variáveis de ambiente via lookup('env', ...).
-# Para que isso funcione em produção, as variáveis devem estar
-# exportadas no ambiente que executa o ansible-playbook.
-# O bootstrap.sh faz esse export automaticamente.
-#
-# Se executar o ansible manualmente:
-#   export \$(grep -v '^#' envs/.env | xargs)
-#   ansible-playbook -i ansible/inventories/production/hosts.yml ansible/site.yml
-EOF
+printf '%s\n' \
+  '---' \
+  '# Gerado automaticamente — não edite manualmente.' \
+  '# As variáveis são lidas do ambiente via lookup(env) no group_vars/all.yml.' \
+  '# O bootstrap.sh exporta o envs/.env antes de executar o ansible-playbook.' \
+  '#' \
+  '# Para executar o ansible manualmente:' \
+  '#   export $(grep -v "^#" envs/.env | xargs)' \
+  '#   ansible-playbook -i ansible/inventories/production/hosts.yml ansible/site.yml' \
+  > "${GROUP_VARS_FILE}"
 
 echo "✔ Inventário gerado: ${HOSTS_FILE}"
 echo "✔ group_vars gerado : ${GROUP_VARS_FILE}"
