@@ -137,6 +137,13 @@ NFS_SERVER_IP=${TF_IP_GS_WRITE}
 NFS_EXPORT_PATH=${NFS_EXPORT_PATH:-/opt/geoserver_data}
 NFS_MOUNT_PATH=${NFS_MOUNT_PATH:-/opt/geoserver_data}
 
+# ── OAuth2 — Integração GeoNode ↔ GeoServer ──────────────
+# Gerado na primeira execução. Copie para envs/.env após
+# o primeiro deploy para que deploys futuros usem as mesmas
+# credenciais e o GeoServer seja configurado corretamente.
+OAUTH2_CLIENT_ID=${OAUTH2_CLIENT_ID:-}
+OAUTH2_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET:-}
+
 # ── HAProxy / Keepalived ──────────────────────────────────
 HAPROXY_STATS_PORT=${HAPROXY_STATS_PORT:-8404}
 HAPROXY_STATS_USER=${HAPROXY_STATS_USER:-haproxy}
