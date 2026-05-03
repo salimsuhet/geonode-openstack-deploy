@@ -103,6 +103,8 @@ HAPROXY_VIP_PROD=${TF_IP_VIP}
 FLOATING_IP_VIP=${TF_FIP}
 
 # ── GeoNode — hostname público ────────────────────────────
+# Hostname público para o server_name do Nginx
+GEONODE_PUBLIC_HOSTNAME=${TF_FIP:-${TF_IP_VIP}}
 GEONODE_HOSTNAME=${EFFECTIVE_HOSTNAME}
 GEONODE_SITE_URL=http://${EFFECTIVE_HOSTNAME}
 
