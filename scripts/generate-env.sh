@@ -70,6 +70,9 @@ GEONODE_PUBLIC_IP="${TF_FIP:-${TF_IP_VIP}}"
 # Permite sobrescrever via .env
 EFFECTIVE_HOSTNAME="${GEONODE_HOSTNAME:-${GEONODE_PUBLIC_IP}}"
 
+# Esquema HTTP/HTTPS derivado da flag HTTPS do .env
+SCHEME=$([ "${HTTPS:-0}" = "1" ] && echo "https" || echo "http")
+
 echo "→ Gerando ${OUTPUT_ENV}..."
 mkdir -p "$(dirname "${OUTPUT_ENV}")"
 
@@ -102,11 +105,16 @@ HAPROXY_VIP_PROD=${TF_IP_VIP}
 # Floating IP público (vazio se create_floating_ip_for_vip = false)
 FLOATING_IP_VIP=${TF_FIP}
 
+# ── Versões ──────────────────────────────────────────────
+GEONODE_VERSION=${GEONODE_VERSION:-5.0.2}
+GEOSERVER_VERSION=${GEOSERVER_VERSION:-2.27.4}
+GEONODE_NGINX_IMAGE_TAG=${GEONODE_NGINX_IMAGE_TAG:-1.28.0-v1}
+
 # ── GeoNode — hostname público ────────────────────────────
 # Hostname público para o server_name do Nginx
 GEONODE_PUBLIC_HOSTNAME=${TF_FIP:-${TF_IP_VIP}}
 GEONODE_HOSTNAME=${EFFECTIVE_HOSTNAME}
-GEONODE_SITE_URL=http://${EFFECTIVE_HOSTNAME}
+GEONODE_SITE_URL=${SCHEME}://${EFFECTIVE_HOSTNAME}
 
 # ── Banco de dados ────────────────────────────────────────
 DB_HOST=${TF_IP_DB}
@@ -123,7 +131,7 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 GEONODE_ADMIN_USER=${GEONODE_ADMIN_USER:-admin}
 GEONODE_ADMIN_PASSWORD=${GEONODE_ADMIN_PASSWORD}
 GEONODE_ADMIN_EMAIL=${GEONODE_ADMIN_EMAIL:-admin@example.com}
-DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+GEONODE_SECRET_KEY=${DJANGO_SECRET_KEY}
 GEONODE_PORT=${GEONODE_PORT:-8000}
 
 # ── GeoServer ─────────────────────────────────────────────
@@ -151,16 +159,24 @@ HAPROXY_STATS_PASSWORD=${HAPROXY_STATS_PASSWORD}
 HAPROXY_HTTP_PORT=${HAPROXY_HTTP_PORT:-80}
 HAPROXY_HTTPS_PORT=${HAPROXY_HTTPS_PORT:-443}
 KEEPALIVED_INTERFACE=${KEEPALIVED_INTERFACE:-ens3}
-KEEPALIVED_ROUTER_ID=${KEEPALIVED_ROUTER_ID:-51}
+KEEPALIVED_VRRP_ID=${KEEPALIVED_ROUTER_ID:-51}
+KEEPALIVED_VRRP_PASSWORD=${KEEPALIVED_VRRP_PASSWORD:-changeme_vrrp}
+
+# ── HTTPS / TLS ───────────────────────────────────────────
+HTTPS=${HTTPS:-0}
+LETS_ENCRYPT=${LETS_ENCRYPT:-0}
+LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-}
 EOF
 
 echo "✔ ${OUTPUT_ENV} gerado com sucesso."
 echo ""
-echo "  Branch  : ${GEONODE_BRANCH:-main}"
-echo "  Hostname: ${EFFECTIVE_HOSTNAME}"
-echo "  DB      : ${TF_IP_DB}"
-echo "  GeoNode : ${TF_IP_GEONODE}"
-echo "  GS Write: ${TF_IP_GS_WRITE}"
-echo "  GS Read : ${TF_IP_GS_READ_1} / ${TF_IP_GS_READ_2}"
-echo "  HAProxy : ${TF_IP_HAPROXY_1} (MASTER) / ${TF_IP_HAPROXY_2} (BACKUP)"
-echo "  VIP     : ${TF_IP_VIP}  FIP: ${TF_FIP:-n/a}"
+echo "  Branch   : ${GEONODE_BRANCH:-main}"
+echo "  Hostname : ${EFFECTIVE_HOSTNAME}"
+echo "  Scheme   : ${SCHEME}"
+echo "  DB       : ${TF_IP_DB}"
+echo "  GeoNode  : ${TF_IP_GEONODE}"
+echo "  GS Write : ${TF_IP_GS_WRITE}"
+echo "  GS Read  : ${TF_IP_GS_READ_1} / ${TF_IP_GS_READ_2}"
+echo "  HAProxy  : ${TF_IP_HAPROXY_1} (MASTER) / ${TF_IP_HAPROXY_2} (BACKUP)"
+echo "  VIP      : ${TF_IP_VIP}  FIP: ${TF_FIP:-n/a}"
+echo "  HTTPS    : ${HTTPS:-0}  Let's Encrypt: ${LETS_ENCRYPT:-0}"
