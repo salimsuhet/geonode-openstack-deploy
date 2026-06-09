@@ -64,11 +64,13 @@ TF_IP_HAPROXY_2=$(tf_get "ip_haproxy_2")
 TF_IP_VIP=$(tf_get "ip_haproxy_vip")
 TF_FIP=$(tf_get "floating_ip_vip")
 
-# Hostname público: FIP se existir, caso contrário VIP privado
+# Hostname público: .env > FIP do Terraform > VIP privado
 GEONODE_PUBLIC_IP="${TF_FIP:-${TF_IP_VIP}}"
 
-# Permite sobrescrever via .env
-EFFECTIVE_HOSTNAME="${GEONODE_HOSTNAME:-${GEONODE_PUBLIC_IP}}"
+# GEONODE_PUBLIC_HOSTNAME: respeita o valor do .env se já preenchido
+# (ex: 200.137.68.74.sslip.io), caso contrário usa o FIP/VIP
+GEONODE_PUBLIC_HOSTNAME="${GEONODE_PUBLIC_HOSTNAME:-${GEONODE_PUBLIC_IP}}"
+EFFECTIVE_HOSTNAME="${GEONODE_PUBLIC_HOSTNAME}"
 
 # Esquema HTTP/HTTPS derivado da flag HTTPS do .env
 SCHEME=$([ "${HTTPS:-0}" = "1" ] && echo "https" || echo "http")
@@ -111,10 +113,10 @@ GEOSERVER_VERSION=${GEOSERVER_VERSION:-2.27.4}
 GEONODE_NGINX_IMAGE_TAG=${GEONODE_NGINX_IMAGE_TAG:-1.28.0-v1}
 
 # ── GeoNode — hostname público ────────────────────────────
-# Hostname público para o server_name do Nginx
-GEONODE_PUBLIC_HOSTNAME=${TF_FIP:-${TF_IP_VIP}}
-GEONODE_HOSTNAME=${EFFECTIVE_HOSTNAME}
-GEONODE_SITE_URL=${SCHEME}://${EFFECTIVE_HOSTNAME}
+# Prioridade: .env (GEONODE_PUBLIC_HOSTNAME) > FIP do Terraform > VIP privado
+GEONODE_PUBLIC_HOSTNAME=${GEONODE_PUBLIC_HOSTNAME:-${TF_FIP:-${TF_IP_VIP}}}
+GEONODE_HOSTNAME=${EFFECTIVE_HOSTNAME:-${GEONODE_PUBLIC_HOSTNAME}}
+GEONODE_SITE_URL=${SCHEME}://${GEONODE_PUBLIC_HOSTNAME}
 
 # ── Banco de dados ────────────────────────────────────────
 DB_HOST=${TF_IP_DB}

@@ -225,13 +225,26 @@ ansible-playbook \
 
 success "Deploy concluído com sucesso!"
 echo ""
-echo -e "${BOLD}  GeoNode disponível em:${RESET}"
+
+# Determina esquema e hostname a partir das variáveis carregadas
+SCHEME=$([ "${HTTPS:-0}" = "1" ] && echo "https" || echo "http")
 FLOATING_IP="${FLOATING_IP_VIP:-}"
 VIP_IP="${IP_HAPROXY_VIP:-}"
+PUBLIC_HOST="${GEONODE_PUBLIC_HOSTNAME:-${FLOATING_IP:-${VIP_IP}}}"
+
+echo -e "${BOLD}  GeoNode disponível em:${RESET}"
 if [[ -n "${FLOATING_IP}" ]]; then
-  echo "    http://${FLOATING_IP}  (Floating IP público)"
+  echo "    ${SCHEME}://${PUBLIC_HOST}  (Floating IP público)"
 fi
-echo "    http://${VIP_IP}  (VIP interno — acessível via WireGuard)"
+echo "    ${SCHEME}://${VIP_IP}  (VIP interno — acessível via WireGuard)"
+if [[ "${HTTPS:-0}" = "1" ]]; then
+  echo ""
+  if [[ "${LETS_ENCRYPT:-0}" = "1" ]]; then
+    echo -e "    ${GREEN}✔ TLS ativo — certificado Let's Encrypt (${LETSENCRYPT_EMAIL:-})${RESET}"
+  else
+    echo -e "    ${YELLOW}⚠ TLS ativo — certificado autoassinado${RESET}"
+  fi
+fi
 echo ""
 echo -e "${BOLD}  Credenciais:${RESET}"
 echo "    GeoNode admin: ${GEONODE_ADMIN_USER:-admin} / ${GEONODE_ADMIN_PASSWORD}"
