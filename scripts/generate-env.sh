@@ -6,6 +6,11 @@
 #   2. Senhas, nomes, portas e configurações do envs/.env deste projeto
 #
 # Pré-requisito: terraform apply já foi executado com sucesso.
+#
+# NOTA: Quando LETS_ENCRYPT=1, o GEONODE_PUBLIC_HOSTNAME é SEMPRE
+# derivado do Floating IP atual do Terraform (FIP muda a cada apply).
+# O valor de GEONODE_PUBLIC_HOSTNAME no envs/.env local é ignorado
+# neste caso para evitar que um FIP antigo quebre o certificado.
 
 set -euo pipefail
 
@@ -64,15 +69,40 @@ TF_IP_HAPROXY_2=$(tf_get "ip_haproxy_2")
 TF_IP_VIP=$(tf_get "ip_haproxy_vip")
 TF_FIP=$(tf_get "floating_ip_vip")
 
-# Hostname público: .env > FIP do Terraform > VIP privado
-GEONODE_PUBLIC_IP="${TF_FIP:-${TF_IP_VIP}}"
+# ── Resolução do hostname público ──────────────────────────
+#
+# Quando LETS_ENCRYPT=1 o certificado é emitido para o hostname
+# derivado do FIP atual. Se usarmos um hostname antigo (de um FIP
+# anterior), o certbot falha ou reutiliza um .pem inválido.
+#
+# Regras de prioridade:
+#   LETS_ENCRYPT=1 + FIP disponível  → sempre usa FIP.sslip.io atual
+#   LETS_ENCRYPT=1 + sem FIP         → erro: FIP é obrigatório
+#   LETS_ENCRYPT=0                   → respeita GEONODE_PUBLIC_HOSTNAME
+#                                       do .env; se vazio usa FIP ou VIP
 
-# GEONODE_PUBLIC_HOSTNAME: respeita o valor do .env se já preenchido
-# (ex: 200.137.68.74.sslip.io), caso contrário usa o FIP/VIP
-GEONODE_PUBLIC_HOSTNAME="${GEONODE_PUBLIC_HOSTNAME:-${GEONODE_PUBLIC_IP}}"
-EFFECTIVE_HOSTNAME="${GEONODE_PUBLIC_HOSTNAME}"
+LETS_ENCRYPT_ENABLED="${LETS_ENCRYPT:-0}"
 
-# Esquema HTTP/HTTPS derivado da flag HTTPS do .env
+if [[ "${LETS_ENCRYPT_ENABLED}" == "1" ]]; then
+  if [[ -z "${TF_FIP}" ]]; then
+    echo "✗ LETS_ENCRYPT=1 requer um Floating IP público."
+    echo "  Defina CREATE_FLOATING_IP_FOR_VIP=true no envs/.env e re-execute terraform apply."
+    exit 1
+  fi
+
+  # FIP atual do Terraform — sempre sobrescreve para evitar .pem obsoleto
+  EFFECTIVE_HOSTNAME="${TF_FIP}.sslip.io"
+
+  if [[ -n "${GEONODE_PUBLIC_HOSTNAME:-}" && "${GEONODE_PUBLIC_HOSTNAME}" != "${EFFECTIVE_HOSTNAME}" ]]; then
+    echo "⚠  LETS_ENCRYPT=1: ignorando GEONODE_PUBLIC_HOSTNAME='${GEONODE_PUBLIC_HOSTNAME}' do .env."
+    echo "   Usando FIP atual do Terraform: ${EFFECTIVE_HOSTNAME}"
+  fi
+else
+  # Sem Let's Encrypt: respeita o valor manual se definido
+  GEONODE_PUBLIC_IP="${TF_FIP:-${TF_IP_VIP}}"
+  EFFECTIVE_HOSTNAME="${GEONODE_PUBLIC_HOSTNAME:-${GEONODE_PUBLIC_IP}}"
+fi
+
 SCHEME=$([ "${HTTPS:-0}" = "1" ] && echo "https" || echo "http")
 
 echo "→ Gerando ${OUTPUT_ENV}..."
@@ -113,10 +143,11 @@ GEOSERVER_VERSION=${GEOSERVER_VERSION:-2.27.4}
 GEONODE_NGINX_IMAGE_TAG=${GEONODE_NGINX_IMAGE_TAG:-1.28.0-v1}
 
 # ── GeoNode — hostname público ────────────────────────────
-# Prioridade: .env (GEONODE_PUBLIC_HOSTNAME) > FIP do Terraform > VIP privado
-GEONODE_PUBLIC_HOSTNAME=${GEONODE_PUBLIC_HOSTNAME:-${TF_FIP:-${TF_IP_VIP}}}
-GEONODE_HOSTNAME=${EFFECTIVE_HOSTNAME:-${GEONODE_PUBLIC_HOSTNAME}}
-GEONODE_SITE_URL=${SCHEME}://${GEONODE_PUBLIC_HOSTNAME}
+# Quando LETS_ENCRYPT=1: sempre derivado do FIP atual (${TF_FIP}.sslip.io)
+# Quando LETS_ENCRYPT=0: respeita GEONODE_PUBLIC_HOSTNAME do .env ou usa FIP/VIP
+GEONODE_PUBLIC_HOSTNAME=${EFFECTIVE_HOSTNAME}
+GEONODE_HOSTNAME=${EFFECTIVE_HOSTNAME}
+GEONODE_SITE_URL=${SCHEME}://${EFFECTIVE_HOSTNAME}
 
 # ── Banco de dados ────────────────────────────────────────
 DB_HOST=${TF_IP_DB}
@@ -182,3 +213,6 @@ echo "  GS Read  : ${TF_IP_GS_READ_1} / ${TF_IP_GS_READ_2}"
 echo "  HAProxy  : ${TF_IP_HAPROXY_1} (MASTER) / ${TF_IP_HAPROXY_2} (BACKUP)"
 echo "  VIP      : ${TF_IP_VIP}  FIP: ${TF_FIP:-n/a}"
 echo "  HTTPS    : ${HTTPS:-0}  Let's Encrypt: ${LETS_ENCRYPT:-0}"
+if [[ "${LETS_ENCRYPT_ENABLED}" == "1" ]]; then
+  echo "  ⚠  FIP mudou? Hostname atualizado automaticamente para: ${EFFECTIVE_HOSTNAME}"
+fi
